@@ -1,8 +1,8 @@
 # DDSCAT run workflow
 
-This repository contains a small wrapper around DDSCAT. DDSCAT itself is treated as a black box: the user sets the simulation parameters in one file, the Python helper creates `ddscat.par`, and `main.sh` runs DDSCAT.
+This repository is meant to help getting familiar with DDSCAT without having to understand the code itself. The user defines the simulation parameters in one file (input.toml), additional Python scripts then create the file `ddscat.par`, and `main.sh` runs DDSCAT.
 
-For installation and background information, see the accompanying manual (`main.txt`) and the official DDSCAT User Guide.
+For installation and necessairy background information, see the accompanying manual and the official DDSCAT User Guide.
 
 ## Files in this repository
 
