@@ -1,0 +1,66 @@
+# paths used by the workflow
+[paths]
+ddscat_executable = "/star/home/USER/DDA/src/ddscat"
+run_directory = "/star/data/USER/DDSCAT/example_run"
+material_file = "/star/home/USER/DDA/diel/astrosil"
+
+# choose "FROM_FILE" for a custom target from shape.dat
+# choose "ELLIPSOID" for a built-in ellipsoid/sphere target
+[target]
+shape = "FROM_FILE"
+shape_file = "/star/data/USER/DDSCAT/shapes/shape.dat"
+
+# only used when shape = "ELLIPSOID"
+# these values are passed directly to DDSCAT as SHPAR1, SHPAR2, SHPAR3
+# use equal values for a sphere and check the DDSCAT manual for their meaning
+shape_parameters = [70.0, 70.0, 70.0]
+
+# effective radius in micrometres
+# format: minimum, maximum, number of values
+# for one radius, minimum and maximum should be identical
+[effective_radius]
+minimum_um = 1.0
+maximum_um = 1.0
+count = 1
+spacing = "LIN"
+
+# wavelength grid in micrometres
+[wavelength]
+minimum_um = 0.3
+maximum_um = 100.0
+count = 60
+spacing = "LOG"
+
+# numerical settings
+[numerics]
+solver = "PBCGS2"
+fft = "GPFAFT"
+polarizability = "GKDLDR"
+tolerance = 1.0e-5
+max_iterations = 1000
+gamma = 1.0e-2
+eta_sca = 0.5
+memory = [100, 100, 100]
+ambient_refractive_index = 1.0
+nearfield = false
+
+# target orientation
+# each list is: minimum angle, maximum angle, number of values
+[orientation]
+beta = [0.0, 0.0, 1]
+theta = [0.0, 0.0, 1]
+phi = [0.0, 0.0, 1]
+
+# incident polarization and output
+[output]
+iorth = 2
+write_sca = 0
+mueller_elements = [11, 12, 21, 22, 31, 41]
+
+# angular scattering grid
+[scattering]
+frame = "LFRAME"
+# each row is phi, theta_min, theta_max, theta_step in degrees
+planes = [
+  [0.0, 0.0, 180.0, 5.0]
+]
