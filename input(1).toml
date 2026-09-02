@@ -1,0 +1,105 @@
+# example configuration for a compact homogeneous sphere
+# this file is ready to run if DDSCAT is installed in ~/DDA
+
+[paths]
+
+# compiled DDSCAT executable
+ddscat_executable = "~/DDA/src/ddscat"
+
+# the run directory will be created automatically
+run_directory = "./runs/solid_sphere"
+
+# optical constants of astronomical silicate
+material_file = "~/DDA/diel/astrosil"
+
+
+[target]
+
+# a built-in ellipsoid with three equal axes gives a sphere
+shape = "ELLIPSOID"
+
+# target dimensions in dipole units
+# equal values give a sphere with approximately D/d = 70
+shape_parameters = [70.0, 70.0, 70.0]
+
+
+[effective_radius]
+
+# effective radius in micrometres
+# for one radius, minimum and maximum are identical
+minimum_um = 1.0
+maximum_um = 1.0
+count = 1
+spacing = "LIN"
+
+
+[wavelength]
+
+# wavelength range in micrometres
+minimum_um = 0.3
+maximum_um = 100.0
+count = 60
+spacing = "LOG"
+
+
+[numerics]
+
+# iterative solver
+solver = "PBCGS2"
+
+# FFT method
+fft = "GPFAFT"
+
+# dipole polarizability prescription
+polarizability = "GKDLDR"
+
+# solver convergence tolerance
+tolerance = 1.0e-5
+
+# maximum number of solver iterations
+max_iterations = 1000
+
+# standard DDSCAT numerical parameters
+gamma = 1.0e-2
+eta_sca = 0.5
+
+# available dipole grid
+memory = [100, 100, 100]
+
+# refractive index of the surrounding medium; 1.0 means vacuum
+ambient_refractive_index = 1.0
+
+# no near-field calculation for this basic example
+nearfield = false
+
+
+[orientation]
+
+# each list contains: minimum angle, maximum angle, number of values
+# the orientation does not affect a homogeneous sphere
+beta = [0.0, 0.0, 1]
+theta = [0.0, 0.0, 1]
+phi = [0.0, 0.0, 1]
+
+
+[output]
+
+# calculate two orthogonal incident polarizations
+iorth = 2
+
+# do not write additional working scattering files
+write_sca = 0
+
+# Mueller-matrix elements written to the scattering output
+mueller_elements = [11, 12, 21, 22, 31, 41]
+
+
+[scattering]
+
+# laboratory reference frame
+frame = "LFRAME"
+
+# each row contains: phi, theta_min, theta_max, theta_step in degrees
+planes = [
+    [0.0, 0.0, 180.0, 5.0]
+]
