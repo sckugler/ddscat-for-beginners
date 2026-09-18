@@ -1,3 +1,54 @@
+# DDSCAT for Beginners
+
+A small collection of notes and Python scripts for setting up, running, and
+analysing DDSCAT calculations.
+
+This repository was created during a summer internship at
+Christian-Albrechts-Universität zu Kiel and is intended as a practical
+starting point for users who are new to DDSCAT.
+
+> **Code note:** Some of the Python and shell code in this repository was
+> developed with assistance from large language models, including ChatGPT
+> (OpenAI). The scripts were reviewed, modified, and tested on the calculations
+> used during this project. Paths and numerical parameters should still be
+> checked before using them for a new setup.
+
+## Documentation
+
+A more detailed introduction is available here:
+
+**[Running DDSCAT — A Beginner's Guide (PDF)](docs/ddscat_for_beginners.pdf)**
+
+The manual explains the main DDSCAT input files, `ddscat.par`, material files,
+custom `shape.dat` targets, important output files, convergence checks, and a
+complete example calculation.
+
+## Installing DDSCAT
+
+DDSCAT itself is not included in this repository.
+
+Download DDSCAT 7.3.4 from the official DDSCAT download page:
+
+**https://ddscat.wikidot.com/downloads**
+
+Download both:
+
+1. **DDSCAT 7.3.4 FORTRAN code**
+2. **DDSCAT 7.3.4 Examples**
+
+The Examples download is important because it contains the `examples_exp`
+directory used throughout this repository.
+
+A convenient directory structure is
+
+```text
+DDA/
+├── src/
+│   └── ddscat
+├── examples_exp/
+├── diel/
+└── doc/
+
 # DDSCAT run workflow
 
 This repository is meant to help getting familiar with DDSCAT without having to understand the code itself. The user defines the simulation parameters in one file (input.toml), additional Python scripts then create the file `ddscat.par`, and `main.sh` runs DDSCAT.
