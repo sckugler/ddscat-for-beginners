@@ -1,42 +1,91 @@
 #!/bin/bash
+
+# Slurm settings
+# These lines are only used when the script is submitted with:
+#     sbatch main.sh input.toml
+# If you run the script locally with:
+#     bash main.sh input.toml
+# Slurm ignores these lines.
+
 #SBATCH --job-name=ddscat
+
+# CHANGE THIS if your cluster uses a different partition.
 #SBATCH --partition=student-l
+
+# CHANGE THIS if your cluster uses a different QoS,
+# or remove the line if no QoS is required.
 #SBATCH --qos=long
+
+# DDSCAT is normally run here as a serial program.
+# One node, one task and one CPU are therefore sufficient.
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
+
+# CHANGE THIS if the calculation needs more or less time.
+# format: days-hours:minutes:seconds
 #SBATCH --time=1-00:00:00
+
+# CHANGE THIS if a larger calculation needs more memory.
 #SBATCH --mem=8G
-#SBATCH --output=ddscat_%j.out
-#SBATCH --error=ddscat_%j.err
+# Stop the script immediately if one command fails.
+set -e
 
-set -euo pipefail
 
-config="${1:-input.toml}"
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Input file
+# The script expects exactly one argument:
+#     bash main.sh input.toml
+# or
+#     sbatch main.sh input.toml
 
-python "$script_dir/generate_ddscat.py" "$config"
+if [ "$#" -ne 1 ]; then
+    echo "Usage: bash main.sh input.toml"
+    exit 1
+fi
 
-mapfile -t settings < <(
-    python - "$config" <<'PY'
+
+CONFIG="$1"
+
+# Generate DDSCAT input files
+# This calls generate_ddscat.py, which reads input.toml and:
+# - creates the run directory
+# - writes ddscat.par
+# - copies the material file to diel.dat
+# - copies shape.dat if FROM_FILE is used
+
+python3 generate_ddscat.py "$CONFIG"
+
+
+# Read paths from input.toml
+# Instead of hard-coding paths here, the script reads them directly from the TOML configuration file.
+
+RUN_DIRECTORY=$(python3 - "$CONFIG" <<'PY'
 import sys
 import tomllib
-from pathlib import Path
 
 with open(sys.argv[1], "rb") as file:
-    config = tomllib.load(file)
+    cfg = tomllib.load(file)
 
-print(Path(config["paths"]["run_directory"]).expanduser())
-print(Path(config["paths"]["ddscat_executable"]).expanduser())
+print(cfg["paths"]["run_directory"])
 PY
 )
 
-run_directory="${settings[0]}"
-ddscat_executable="${settings[1]}"
 
-cd "$run_directory"
+DDSCAT_EXECUTABLE=$(python3 - "$CONFIG" <<'PY'
+import sys
+import tomllib
 
-echo "running DDSCAT in $run_directory"
-echo "executable: $ddscat_executable"
+with open(sys.argv[1], "rb") as file:
+    cfg = tomllib.load(file)
 
-"$ddscat_executable"
+print(cfg["paths"]["ddscat_executable"])
+PY
+)
+
+# DDSCAT must be started inside the run directory because it looks for ddscat.par in the current working directory
+
+cd "$RUN_DIRECTORY"
+
+
+# Start the compiled DDSCAT executable.
+"$DDSCAT_EXECUTABLE"
