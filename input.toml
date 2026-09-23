@@ -12,7 +12,6 @@ run_directory = "./runs/solid_sphere"
 # optical constants of astronomical silicate
 material_file = "~/DDA/diel/astrosil"
 
-
 [target]
 
 # a built-in ellipsoid with three equal axes gives a sphere
@@ -31,7 +30,6 @@ minimum_um = 1.0
 maximum_um = 1.0
 count = 1
 spacing = "LIN"
-
 
 [wavelength]
 
