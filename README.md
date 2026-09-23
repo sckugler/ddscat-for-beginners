@@ -35,7 +35,7 @@ Download both:
 2. **DDSCAT 7.3.4 Examples**
 
 The example package is needed for the `examples_exp` directory used throughout
-this repository. 
+this repository.
 
 A convenient directory structure is:
 
@@ -133,13 +133,17 @@ accompanying manual and the official DDSCAT User Guide.
 │   └── ddscat_for_beginners.pdf
 └── scripts/
     ├── compare_qtables.py
+    ├── generate_oblate_shape.py
     ├── generate_porous_sphere.py
+    ├── generate_two_material_sphere.py
     ├── plot_multiple_qtables.py
     ├── plot_shape_slice.py
     ├── runtime_vs_ice_fraction.py
     ├── runtime_vs_oblateness.py
     ├── runtime_vs_porosity.py
-    └── runtime_vs_wavelength.py
+    ├── runtime_vs_wavelength.py
+    ├── visualize_shape_3d.py
+    └── visualize_shape_slice.py
 ```
 
 The workflow uses one user-editable input file:
@@ -153,8 +157,10 @@ The main scripts are:
 - `check_run.py`: checks how many wavelength/radius combinations finished and inspects the DDSCAT log
 - `plot_qtable.py`: makes a first overview plot from `qtable`
 
-The additional scripts in `scripts/` are small examples used during the
-project. They can be adapted for other targets and directory structures.
+The additional scripts in `scripts/` are optional examples used during the
+project. They are **not required to run DDSCAT**. They can be adapted for
+creating custom targets, visualising `shape.dat`, comparing calculations, and
+analysing runtimes.
 
 ---
 
@@ -185,16 +191,49 @@ The helper copies the material into the run directory as `diel.dat` and the
 custom geometry as `shape.dat`. `ddscat.par` therefore contains short local
 file names. This also avoids problems with long material paths in DDSCAT.
 
+For targets containing more than one material, DDSCAT needs one dielectric
+file per material and `NCOMP` must match the number of materials. The material
+numbers stored in `shape.dat` (`ICOMPX`, `ICOMPY`, `ICOMPZ`) refer to the order
+of these dielectric files. See `scripts/generate_two_material_sphere.py` for a
+simple example.
+
 For a built-in ellipsoid target, use:
 
 ```toml
 shape = "ELLIPSOID"
-shape_parameters = [70.0, 70.0, 70.0] 
+shape_parameters = [70.0, 70.0, 70.0]
 ```
 
-Equal values give a sphere. The shape parameters are passed directly to
-DDSCAT as `SHPAR1`, `SHPAR2`, and `SHPAR3`; consult the DDSCAT manual before
-changing them.
+For `ELLIPSOID`, the three numbers describe the target dimensions in units of
+the dipole spacing `d`. Here, `d` is the distance between neighbouring dipoles
+on the DDSCAT lattice and `D` is the particle diameter. The ratio `D/d`
+therefore tells us approximately how many dipole spacings fit across the
+particle.
+
+For
+
+```toml
+shape_parameters = [70.0, 70.0, 70.0]
+```
+
+all three dimensions are equal, so the target is a sphere with approximately
+`D/d = 70`. The value `70` is **not** a physical radius in micrometres. The
+physical grain size is set separately by the effective radius.
+
+Increasing the values, for example from `[50, 50, 50]` to `[70, 70, 70]`,
+represents the same physical grain with more dipoles and therefore a finer DDA
+resolution, but also increases the computational cost.
+
+Different values produce a non-spherical ellipsoid. For example,
+
+```toml
+shape_parameters = [70.0, 70.0, 35.0]
+```
+
+gives an oblate grain that is flattened along the third axis.
+
+The values are passed directly to DDSCAT as `SHPAR1`, `SHPAR2`, and `SHPAR3`;
+consult the DDSCAT manual before changing them substantially.
 
 ---
 
@@ -218,6 +257,14 @@ shape = "FROM_FILE"
 
 # Only needed for FROM_FILE.
 shape_file = "/star/data/USER/DDSCAT/shapes/shape.dat"
+
+# For ELLIPSOID, use for example:
+# shape_parameters = [70.0, 70.0, 70.0]
+#
+# d = distance between neighbouring dipoles
+# D = particle diameter
+# [70,70,70] therefore corresponds to roughly D/d = 70 in each direction.
+# The physical particle size is set separately by effective_radius.
 
 [effective_radius]
 
@@ -493,7 +540,68 @@ POROSITIES = [
 ]
 ```
 
-A fixed random seed is used so that the generated targets are reproducible.
+The script contains a switch for the random seed:
+
+```python
+USE_FIXED_SEED = True
+```
+
+With a fixed seed, the same porous geometry is generated every time, which is
+useful for reproducibility. Set
+
+```python
+USE_FIXED_SEED = False
+```
+
+to generate a new random porous geometry each time the script is run.
+
+### `generate_oblate_shape.py`
+
+Creates an oblate ellipsoidal `shape.dat` target. This is optional because a
+homogeneous ellipsoid can also be generated directly with `ELLIPSOID` in
+DDSCAT. The script is useful when an actual `shape.dat` is needed, for example
+before adding porosity or multiple materials.
+
+The semi-axes are set near the top of the script:
+
+```python
+A_X = 35
+A_Y = 35
+A_Z = 20
+```
+
+### `generate_two_material_sphere.py`
+
+Creates a compact spherical `shape.dat` containing two explicitly distributed
+materials. Material numbers in `shape.dat` correspond to the order of the
+dielectric files in `ddscat.par`.
+
+For two isotropic materials, `ddscat.par` has to contain for example:
+
+```text
+2 = NCOMP
+'material_1.dat'
+'material_2.dat'
+```
+
+and the dipoles in `shape.dat` use `1 1 1` for material 1 and `2 2 2` for
+material 2.
+
+The fraction assigned to material 2 can be changed in
+`MATERIAL_2_FRACTIONS`. A fixed random seed can be used for reproducible
+material distributions.
+
+### `visualize_shape_3d.py`
+
+Displays a custom `shape.dat` as a 3D dipole cloud. Different material numbers
+are plotted separately. For very large targets, only a subset of dipoles is
+shown to keep the plot responsive; this does not modify the actual target.
+
+### `visualize_shape_slice.py`
+
+Displays an `xy`, `xz`, or `yz` slice through `shape.dat`. This is useful for
+checking the shape, porosity, or the spatial distribution of different
+materials inside a grain.
 
 ### Runtime scripts
 
