@@ -1,26 +1,47 @@
-#!/usr/bin/env python3
+'''
+Check the progress/status of a DDSCAT run
+
+Normally, you do NOT need to edit this file.
+Run it with:
+
+    python3 check_run.py input.toml
+
+It reads the run directory and expected number of wavelength/radius points
+from input.toml, then checks qtable and ddscat.log_000.
+
+If your DDSCAT setup writes progress in a different way, this script may need
+to be adapted.
+'''
 
 from pathlib import Path
-import re
 import sys
 import tomllib
 
 
-data_pattern = re.compile(
-    r"^[+-]?(?:\d+(?:\.\d*)?|\.\d+)[Ee][+-]?\d+$"
+if len(sys.argv) != 2:
+    raise SystemExit("Usage: python3 check_run.py input.toml")
+
+
+with open(sys.argv[1], "rb") as file:
+    cfg = tomllib.load(file)
+
+
+run_directory = Path(cfg["paths"]["run_directory"]).expanduser()
+
+expected = (
+    cfg["wavelength"]["count"]
+    * cfg["effective_radius"]["count"]
 )
 
-
-def load_config(filename):
-    with open(filename, "rb") as file:
-        return tomllib.load(file)
+qtable = run_directory / "qtable"
+logfile = run_directory / "ddscat.log_000"
 
 
 def count_qtable_rows(filename):
-    count = 0
-
     if not filename.exists():
-        return count
+        return 0
+
+    count = 0
 
     with open(filename) as file:
         for line in file:
@@ -29,47 +50,28 @@ def count_qtable_rows(filename):
             if len(values) < 8:
                 continue
 
-            if data_pattern.match(values[0]) and data_pattern.match(values[1]):
-                count += 1
+            try:
+                [float(x) for x in values[:8]]
+            except ValueError:
+                continue
+
+            count += 1
 
     return count
 
 
-def main(config_filename):
-    config = load_config(config_filename)
-    run_directory = Path(config["paths"]["run_directory"]).expanduser()
+finished = count_qtable_rows(qtable)
 
-    nwav = int(config["wavelength"]["count"])
-    nrad = int(config["effective_radius"]["count"])
-    expected = nwav * nrad
+print(f"qtable rows: {finished} / {expected}")
 
-    qtable = run_directory / "qtable"
-    completed = count_qtable_rows(qtable)
-
-    print(f"run directory: {run_directory}")
-    print(f"qtable rows: {completed} / {expected}")
-
-    log_files = sorted(run_directory.glob("ddscat.log_*"))
-
-    if not log_files:
-        print("no ddscat.log_* file found")
-        return
-
-    latest_log = log_files[-1]
-    text = latest_log.read_text(errors="replace")
+if logfile.exists():
+    text = logfile.read_text(errors="replace")
 
     if "DDSCAT normal termination" in text:
         print("status: DDSCAT normal termination")
-    elif "FATAL ERROR" in text:
-        print("status: fatal error reported")
-        print("last log lines:")
-        print("\n".join(text.splitlines()[-15:]))
     else:
-        print("status: run may still be active or ended without normal termination")
-        print("last log lines:")
-        print("\n".join(text.splitlines()[-10:]))
-
-
-if __name__ == "__main__":
-    config_filename = sys.argv[1] if len(sys.argv) > 1 else "input.toml"
-    main(config_filename)
+        print("status: run not normally terminated")
+        print("\nLast lines of ddscat.log_000:\n")
+        print("\n".join(text.splitlines()[-20:]))
+else:
+    print("ddscat.log_000 not found")
