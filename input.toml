@@ -9,6 +9,7 @@ ddscat_executable = "~/DDA/src/ddscat"
 # the run directory will be created automatically
 run_directory = "./runs/solid_sphere"
 
+
 # optical constants of astronomical silicate
 material_file = "~/DDA/diel/astrosil"
 
