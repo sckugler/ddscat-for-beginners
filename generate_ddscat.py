@@ -1,8 +1,16 @@
+'''
+Generate ddscat.par and prepare a DDSCAT run directory.
+
+Normally, you do NOT need to edit this file
+For a new simulation, change the values in input.toml instead
+Only edit this script if you want to change the structure of the generated
+ddscat.par file or add new DDSCAT options that are not included in input.toml
+'''
+
 from pathlib import Path
 import shutil
 import sys
 import tomllib
-
 
 if len(sys.argv) != 2:
     raise SystemExit("Usage: python3 generate_ddscat.py input.toml")
@@ -24,31 +32,31 @@ polarization = cfg["polarization"]
 run_directory = Path(paths["run_directory"]).expanduser()
 run_directory.mkdir(parents=True, exist_ok=True)
 
-# Copy material into the run directory
+# copy material into the run directory.
 material_source = Path(paths["material_file"]).expanduser()
 shutil.copy2(material_source, run_directory / "diel.dat")
 
 shape = target["shape"].upper()
 
 if shape == "FROM_FILE":
-    # Custom target: copy the supplied shape.dat.
+    # Custom target: copy the supplied shape.dat
     shape_source = Path(target["shape_file"]).expanduser()
     shutil.copy2(shape_source, run_directory / "shape.dat")
     shape_block = "'FROM_FILE' = CSHAPE\n"
 
 elif shape == "ELLIPSOID":
-'''
-for ELLIPSOID, these values are the particle dimensions measured in units of the dipole spacing d.
-d = distance between neighbouring dipoles on the DDSCAT lattice
-D = physical diameter of the particle along that axis
-Therefore D/d tells us approximately how many dipole spacings
-fit across the particle diameter.
-in this example I use [70, 70, 70] -> sphere with D/d ≈ 70 in x, y and z
-A larger D/d means more dipoles and a finer numerical resolution.
-It does NOT mean that the particle is 70 um large!
-The physical size is set separately by the effective radius later
-'''
-shape_parameters = [70.0, 70.0, 70.0]
+    '''
+    For ELLIPSOID, these values are the particle dimensions
+    measured in units of the dipole spacing d.
+    d = distance between neighbouring dipoles on the DDSCAT lattice
+    D = physical diameter of the particle along that axis
+    So D/d tells us approximately how many dipole spacings
+    fit across the particle diameter.
+    [70, 70, 70] -> sphere with D/d ≈ 70 in x, y and z
+    A larger D/d means more dipoles and a finer numerical resolution.
+    It does NOT mean that the particle is 70 um large
+    The physical size is set separately by the effective radius.
+    '''
     sx, sy, sz = target["shape_parameters"]
     shape_block = (
         "'ELLIPSOID' = CSHAPE\n"
