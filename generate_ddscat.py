@@ -1,198 +1,131 @@
-#!/usr/bin/env python3
-
 from pathlib import Path
 import shutil
 import sys
 import tomllib
 
 
-def load_config(filename):
-    with open(filename, "rb") as file:
-        return tomllib.load(file)
+if len(sys.argv) != 2:
+    raise SystemExit("Usage: python3 generate_ddscat.py input.toml")
 
 
-def copy_input_file(source, destination):
-    source = Path(source).expanduser()
-    destination = Path(destination).expanduser()
+config_file = Path(sys.argv[1])
 
-    if not source.exists():
-        raise FileNotFoundError(f"input file not found: {source}")
-
-    destination.parent.mkdir(parents=True, exist_ok=True)
-
-    if source.resolve() != destination.resolve():
-        shutil.copy2(source, destination)
+with open(config_file, "rb") as file:
+    cfg = tomllib.load(file)
 
 
-def validate_spacing(value, name):
-    value = value.upper()
-    allowed = {"LIN", "LOG", "INV"}
+paths = cfg["paths"]
+target = cfg["target"]
+wavelength = cfg["wavelength"]
+radius = cfg["effective_radius"]
+numerics = cfg["numerics"]
+polarization = cfg["polarization"]
 
-    if value not in allowed:
-        raise ValueError(
-            f"{name} spacing must be one of {sorted(allowed)}, got {value!r}"
-        )
+run_directory = Path(paths["run_directory"]).expanduser()
+run_directory.mkdir(parents=True, exist_ok=True)
 
-    return value
+# Copy material into the run directory
+material_source = Path(paths["material_file"]).expanduser()
+shutil.copy2(material_source, run_directory / "diel.dat")
 
+shape = target["shape"].upper()
 
-def triplet(values, name):
-    if len(values) != 3:
-        raise ValueError(f"{name} must contain exactly three values")
-    return values
+if shape == "FROM_FILE":
+    # Custom target: copy the supplied shape.dat.
+    shape_source = Path(target["shape_file"]).expanduser()
+    shutil.copy2(shape_source, run_directory / "shape.dat")
+    shape_block = "'FROM_FILE' = CSHAPE\n"
 
-
-def build_parameter_file(config):
-    paths = config["paths"]
-    target = config["target"]
-    radius = config["effective_radius"]
-    wavelength = config["wavelength"]
-    numerics = config["numerics"]
-    orientation = config["orientation"]
-    output = config["output"]
-    scattering = config["scattering"]
-
-    shape = target["shape"].upper()
-    wavelength_spacing = validate_spacing(wavelength["spacing"], "wavelength")
-    radius_spacing = validate_spacing(radius["spacing"], "effective radius")
-
-    memory = triplet(numerics["memory"], "memory")
-    beta = triplet(orientation["beta"], "beta")
-    theta = triplet(orientation["theta"], "theta")
-    phi = triplet(orientation["phi"], "phi")
-
-    if wavelength["count"] < 1:
-        raise ValueError("wavelength count must be at least 1")
-
-    if radius["count"] < 1:
-        raise ValueError("effective-radius count must be at least 1")
-
-    lines = [
-        "' ========== Parameter file for DDSCAT 7.3 =========='",
-        "'**** Preliminaries ****'",
-        "'NOTORQ' = CMDTRQ",
-        f"'{numerics['solver'].upper()}' = CMDSOL",
-        f"'{numerics['fft'].upper()}' = CMDFFT",
-        f"'{numerics['polarizability'].upper()}' = CALPHA",
-        "'NOTBIN' = CBINFLAG",
-        "'**** Initial Memory Allocation ****'",
-        f"{int(memory[0])} {int(memory[1])} {int(memory[2])}",
-        "'**** Target Geometry and Composition ****'",
-        f"'{shape}' = CSHAPE",
-    ]
-
-    if shape == "FROM_FILE":
-        shape_file = target.get("shape_file")
-        if not shape_file:
-            raise ValueError("target.shape_file is required when shape = FROM_FILE")
-        lines.append("no SHPAR parameters needed")
-    elif shape == "ELLIPSOID":
-        parameters = target.get("shape_parameters")
-        if parameters is None or len(parameters) != 3:
-            raise ValueError(
-                "target.shape_parameters must contain three values for ELLIPSOID"
-            )
-        lines.append(" ".join(str(value) for value in parameters))
-    else:
-        raise ValueError(
-            "this helper supports FROM_FILE and ELLIPSOID targets; "
-            "other DDSCAT target types can be added to generate_ddscat.py"
-        )
-
-    nearfield = 1 if numerics.get("nearfield", False) else 0
-    mueller = output["mueller_elements"]
-    planes = scattering["planes"]
-
-    lines.extend(
-        [
-            "1 = NCOMP",
-            "'diel.dat'",
-            "'**** Additional Nearfield calculation? ****'",
-            f"{nearfield} = NRFLD",
-            "0.0 0.0 0.0 0.0 0.0 0.0",
-            "'**** Error Tolerance ****'",
-            f"{numerics['tolerance']:.8g} = TOL",
-            "'**** Maximum number of iterations ****'",
-            f"{int(numerics['max_iterations'])} = MXITER",
-            "'**** Interaction cutoff parameter ****'",
-            f"{numerics['gamma']:.8g} = GAMMA",
-            "'**** Angular resolution ****'",
-            f"{numerics['eta_sca']:.8g} = ETASCA",
-            "'**** Vacuum wavelengths (micron) ****'",
-            (
-                f"{wavelength['minimum_um']} {wavelength['maximum_um']} "
-                f"{int(wavelength['count'])} '{wavelength_spacing}'"
-            ),
-            "'**** Refractive index of ambient medium ****'",
-            f"{numerics['ambient_refractive_index']} = NAMBIENT",
-            "'**** Effective Radii (micron) ****'",
-            (
-                f"{radius['minimum_um']} {radius['maximum_um']} "
-                f"{int(radius['count'])} '{radius_spacing}'"
-            ),
-            "'**** Define Incident Polarizations ****'",
-            "(0,0) (1.,0.) (0.,0.)",
-            f"{int(output['iorth'])} = IORTH",
-            "'**** Specify which output files to write ****'",
-            f"{int(output['write_sca'])} = IWRKSC",
-            "'**** Prescribe Target Rotations ****'",
-            f"{beta[0]} {beta[1]} {int(beta[2])} = BETAMI BETAMX NBETA",
-            f"{theta[0]} {theta[1]} {int(theta[2])} = THETMI THETMX NTHETA",
-            f"{phi[0]} {phi[1]} {int(phi[2])} = PHIMIN PHIMAX NPHI",
-            "'**** Specify first IWAV, IRAD, IORI ****'",
-            "0 0 0",
-            "'**** Select Elements of S_ij Matrix to Print ****'",
-            f"{len(mueller)} = NSMELTS",
-            " ".join(str(int(value)) for value in mueller),
-            "'**** Specify Scattered Directions ****'",
-            f"'{scattering['frame'].upper()}'",
-            str(len(planes)),
-        ]
+elif shape == "ELLIPSOID":
+'''
+for ELLIPSOID, these values are the particle dimensions measured in units of the dipole spacing d.
+d = distance between neighbouring dipoles on the DDSCAT lattice
+D = physical diameter of the particle along that axis
+Therefore D/d tells us approximately how many dipole spacings
+fit across the particle diameter.
+in this example I use [70, 70, 70] -> sphere with D/d ≈ 70 in x, y and z
+A larger D/d means more dipoles and a finer numerical resolution.
+It does NOT mean that the particle is 70 um large!
+The physical size is set separately by the effective radius later
+'''
+shape_parameters = [70.0, 70.0, 70.0]
+    sx, sy, sz = target["shape_parameters"]
+    shape_block = (
+        "'ELLIPSOID' = CSHAPE\n"
+        f"{sx} {sy} {sz}\n"
     )
 
-    for plane in planes:
-        if len(plane) != 4:
-            raise ValueError("each scattering plane must contain four values")
-        lines.append(" ".join(str(value) for value in plane))
-
-    return "\n".join(lines) + "\n"
+else:
+    raise ValueError(f"Unsupported target shape: {shape}")
 
 
-def prepare_run(config_filename):
-    config = load_config(config_filename)
-    paths = config["paths"]
+text = f"""'========== Parameter file for DDSCAT 7.3 =========='
 
-    run_directory = Path(paths["run_directory"]).expanduser()
-    run_directory.mkdir(parents=True, exist_ok=True)
+'**** Preliminaries ****'
+'NOTORQ' = CMDTRQ
+'{numerics["solver"]}' = CMDSOL
+'{numerics["fft"]}' = CMDFFT
+'{numerics["polarizability"]}' = CALPHA
+'NOTBIN' = CBINFLAG
 
-    copy_input_file(
-        paths["material_file"],
-        run_directory / "diel.dat",
-    )
+'**** Initial Memory Allocation ****'
+100 100 100
 
-    shape = config["target"]["shape"].upper()
-    if shape == "FROM_FILE":
-        copy_input_file(
-            config["target"]["shape_file"],
-            run_directory / "shape.dat",
-        )
+'**** Target Geometry and Composition ****'
+{shape_block}1 = NCOMP
+'diel.dat'
 
-    parameter_text = build_parameter_file(config)
-    parameter_file = run_directory / "ddscat.par"
-    parameter_file.write_text(parameter_text)
+'**** Additional Nearfield calculation? ****'
+0 = NRFLD
+0.0 0.0 0.0 0.0 0.0 0.0
 
-    executable = Path(paths["ddscat_executable"]).expanduser()
-    if not executable.exists():
-        raise FileNotFoundError(f"DDSCAT executable not found: {executable}")
+'**** Error Tolerance ****'
+{numerics["tolerance"]} = TOL
 
-    print(f"run directory: {run_directory}")
-    print(f"parameter file: {parameter_file}")
-    print(f"material copied to: {run_directory / 'diel.dat'}")
+'**** Maximum number of iterations ****'
+{numerics["max_iterations"]} = MXITER
 
-    if shape == "FROM_FILE":
-        print(f"shape copied to: {run_directory / 'shape.dat'}")
+'**** Interaction cutoff parameter ****'
+{numerics["gamma"]} = GAMMA
 
+'**** Angular resolution ****'
+{numerics["etasca"]} = ETASCA
 
-if __name__ == "__main__":
-    config_filename = sys.argv[1] if len(sys.argv) > 1 else "input.toml"
-    prepare_run(config_filename)
+'**** Vacuum wavelengths (micron) ****'
+{wavelength["minimum_um"]} {wavelength["maximum_um"]} {wavelength["count"]} '{wavelength["spacing"]}'
+
+'**** Refractive index of ambient medium ****'
+1.0 = NAMBIENT
+
+'**** Effective Radii (micron) ****'
+{radius["minimum_um"]} {radius["maximum_um"]} {radius["count"]} '{radius["spacing"]}'
+
+'**** Define Incident Polarizations ****'
+(0,0) (1.,0.) (0.,0.)
+{polarization["iorth"]} = IORTH
+
+'**** Specify which output files to write ****'
+0 = IWRKSC
+
+'**** Prescribe Target Rotations ****'
+0.0 0.0 1 = BETAMI BETAMX NBETA
+0.0 0.0 1 = THETMI THETMX NTHETA
+0.0 0.0 1 = PHIMIN PHIMAX NPHI
+
+'**** Specify first IWAV, IRAD, IORI ****'
+0 0 0
+
+'**** Select Elements of S_ij Matrix to Print ****'
+6 = NSMELTS
+11 12 21 22 31 41
+
+'**** Specify Scattered Directions ****'
+'LFRAME'
+1
+0.0 0.0 180.0 5.0
+"""
+
+output = run_directory / "ddscat.par"
+output.write_text(text)
+
+print(f"Wrote {output}")
