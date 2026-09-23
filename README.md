@@ -129,8 +129,7 @@ accompanying manual and the official DDSCAT User Guide.
 ├── check_run.py
 ├── plot_qtable.py
 ├── main.txt
-├── docs/
-│   └── ddscat_for_beginners.pdf
+├── ddscat_for_beginners.pdf
 └── scripts/
     ├── compare_qtables.py
     ├── generate_oblate_shape.py
@@ -138,9 +137,6 @@ accompanying manual and the official DDSCAT User Guide.
     ├── generate_two_material_sphere.py
     ├── plot_multiple_qtables.py
     ├── plot_shape_slice.py
-    ├── runtime_vs_ice_fraction.py
-    ├── runtime_vs_oblateness.py
-    ├── runtime_vs_porosity.py
     ├── runtime_vs_wavelength.py
     ├── visualize_shape_3d.py
     └── visualize_shape_slice.py
