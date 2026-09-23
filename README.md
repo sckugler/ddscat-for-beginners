@@ -1,13 +1,11 @@
 # DDSCAT for Beginners
 
-A small collection of notes and Python scripts for setting up, running, and
-analysing DDSCAT calculations.
-
-This repository was created during a summer internship at
+This repository contains a small collection of notes and Python scripts for setting up, running, and
+analysing DDSCAT calculations. It was created during a 2-month summer internship at
 Christian-Albrechts-Universität zu Kiel and is intended as a practical
 starting point for users who are new to DDSCAT.
 
-> **Code note:** Some of the Python and shell code in this repository was
+> **Note:** Some of the Python and shell code in this repository was
 > developed with assistance from large language models, including ChatGPT
 > (OpenAI). The scripts were reviewed, modified, and tested on the calculations
 > used during this project. Paths and numerical parameters should still be
@@ -37,8 +35,7 @@ Download both:
 2. **DDSCAT 7.3.4 Examples**
 
 The example package is needed for the `examples_exp` directory used throughout
-this repository. If it is not already included in your DDSCAT directory,
-download the examples separately and place `examples_exp` next to `src`.
+this repository. 
 
 A convenient directory structure is:
 
@@ -147,14 +144,14 @@ accompanying manual and the official DDSCAT User Guide.
 
 The workflow uses one user-editable input file:
 
-- `input.toml` — paths, target, wavelength grid, effective radius and numerical settings
+- `input.toml`: paths, target, wavelength grid, effective radius and numerical settings
 
 The main scripts are:
 
-- `generate_ddscat.py` — creates the run directory and `ddscat.par`
-- `main.sh` — prepares the input files and runs DDSCAT; it can also be submitted with Slurm
-- `check_run.py` — checks how many wavelength/radius combinations finished and inspects the DDSCAT log
-- `plot_qtable.py` — makes a first overview plot from `qtable`
+- `generate_ddscat.py`: creates the run directory and `ddscat.par`
+- `main.sh`: prepares the input files and runs DDSCAT; it can also be submitted with Slurm
+- `check_run.py`: checks how many wavelength/radius combinations finished and inspects the DDSCAT log
+- `plot_qtable.py`: makes a first overview plot from `qtable`
 
 The additional scripts in `scripts/` are small examples used during the
 project. They can be adapted for other targets and directory structures.
@@ -192,7 +189,7 @@ For a built-in ellipsoid target, use:
 
 ```toml
 shape = "ELLIPSOID"
-shape_parameters = [70.0, 70.0, 70.0]
+shape_parameters = [70.0, 70.0, 70.0] 
 ```
 
 Equal values give a sphere. The shape parameters are passed directly to
