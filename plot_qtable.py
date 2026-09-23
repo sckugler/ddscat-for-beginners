@@ -1,22 +1,38 @@
-#!/usr/bin/env python3
+"""
+this file makes a quick overview plot from qtable.
+
+Usually, you only need to change the plotting options marked below
+(e.g. linear/log axes). The run directory is read from input.toml.
+
+Run with:
+
+    python3 plot_qtable.py input.toml
+
+For more specialised comparisons, use the scripts in scripts/.
+"""
 
 from pathlib import Path
-import re
 import sys
 import tomllib
 
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
 
 
-data_pattern = re.compile(
-    r"^[+-]?(?:\d+(?:\.\d*)?|\.\d+)[Ee][+-]?\d+$"
-)
+if len(sys.argv) != 2:
+    raise SystemExit("Usage: python3 plot_qtable.py input.toml")
 
 
-def load_config(filename):
-    with open(filename, "rb") as file:
-        return tomllib.load(file)
+with open(sys.argv[1], "rb") as file:
+    cfg = tomllib.load(file)
+
+
+run_directory = Path(cfg["paths"]["run_directory"]).expanduser()
+qtable = run_directory / "qtable"
+
+# Change these to "linear" if preferred
+X_SCALE = "log"
+Y_SCALE = "log"
 
 
 def read_qtable(filename):
@@ -29,56 +45,38 @@ def read_qtable(filename):
             if len(values) < 8:
                 continue
 
-            if not (
-                data_pattern.match(values[0])
-                and data_pattern.match(values[1])
-            ):
+            try:
+                rows.append([float(x) for x in values[:8]])
+            except ValueError:
                 continue
-
-            rows.append([float(value) for value in values[:8]])
-
-    if not rows:
-        raise ValueError(f"no DDSCAT data rows found in {filename}")
 
     return np.array(rows)
 
 
-def main(config_filename):
-    config = load_config(config_filename)
-    run_directory = Path(config["paths"]["run_directory"]).expanduser()
+data = read_qtable(qtable)
 
-    data = read_qtable(run_directory / "qtable")
+wavelength = data[:, 1]
+qext = data[:, 2]
+qabs = data[:, 3]
+qsca = data[:, 4]
 
-    wavelength = data[:, 1]
-    qext = data[:, 2]
-    qabs = data[:, 3]
-    qsca = data[:, 4]
+plt.figure(figsize=(8, 5.5))
+plt.plot(wavelength, qabs, label="Qabs")
+plt.plot(wavelength, qsca, label="Qsca")
+plt.plot(wavelength, qext, label="Qext")
 
-    order = np.argsort(wavelength)
-    wavelength = wavelength[order]
-    qext = qext[order]
-    qabs = qabs[order]
-    qsca = qsca[order]
+plt.xscale(X_SCALE)
+plt.yscale(Y_SCALE)
 
-    plt.figure(figsize=(8, 5.5))
-    plt.plot(wavelength, qabs, label=r"$Q_{\rm abs}$")
-    plt.plot(wavelength, qsca, label=r"$Q_{\rm sca}$")
-    plt.plot(wavelength, qext, label=r"$Q_{\rm ext}$")
+plt.xlabel(r"Wavelength $\lambda$ [$\mu$m]")
+plt.ylabel("Efficiency")
 
-    plt.xscale("log")
-    plt.yscale("log")
-    plt.xlabel(r"Wavelength $\lambda$ [$\mu$m]")
-    plt.ylabel("Efficiency")
-    plt.title("DDSCAT efficiencies")
-    plt.legend()
-    plt.grid(alpha=0.3)
-    plt.tight_layout()
+plt.legend()
+plt.grid(alpha=0.3)
+plt.tight_layout()
 
-    output_file = run_directory / "qtable_overview.png"
-    plt.savefig(output_file, dpi=300, bbox_inches="tight")
-    print(f"saved: {output_file}")
+output = run_directory / "qtable_overview.png"
+plt.savefig(output, dpi=200) #comment this out if you don't want to save the file
+plt.show()
 
-
-if __name__ == "__main__":
-    config_filename = sys.argv[1] if len(sys.argv) > 1 else "input.toml"
-    main(config_filename)
+print(f"Saved {output}")
