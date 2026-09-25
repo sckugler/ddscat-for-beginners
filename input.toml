@@ -1,5 +1,7 @@
+# ----------------------------------------------------------------------
 # example configuration for a compact homogeneous sphere
 # this file is ready to run if DDSCAT is installed in ~/DDA
+# ----------------------------------------------------------------------
 
 [paths]
 
@@ -12,6 +14,8 @@ run_directory = "./runs/solid_sphere"
 # optical constants of astronomical silicate
 material_file = "~/DDA/diel/astrosil"
 
+# ----------------------------------------------------------------------
+
 [target]
 
 # a built-in ellipsoid with three equal axes gives a sphere
@@ -21,6 +25,7 @@ shape = "ELLIPSOID"
 # equal values give a sphere with approximately D/d = 70
 shape_parameters = [70.0, 70.0, 70.0]
 
+# ----------------------------------------------------------------------
 
 [effective_radius]
 
@@ -31,6 +36,8 @@ maximum_um = 1.0
 count = 1
 spacing = "LIN"
 
+# ----------------------------------------------------------------------
+
 [wavelength]
 
 # wavelength range in micrometres
@@ -39,6 +46,7 @@ maximum_um = 100.0
 count = 60
 spacing = "LOG"
 
+# ----------------------------------------------------------------------
 
 [numerics]
 
@@ -70,6 +78,7 @@ ambient_refractive_index = 1.0
 # no near-field calculation for this basic example
 nearfield = false
 
+# ----------------------------------------------------------------------
 
 [orientation]
 
@@ -79,6 +88,7 @@ beta = [0.0, 0.0, 1]
 theta = [0.0, 0.0, 1]
 phi = [0.0, 0.0, 1]
 
+# ----------------------------------------------------------------------
 
 [output]
 
@@ -91,6 +101,7 @@ write_sca = 0
 # Mueller-matrix elements written to the scattering output
 mueller_elements = [11, 12, 21, 22, 31, 41]
 
+# ----------------------------------------------------------------------
 
 [scattering]
 
@@ -98,6 +109,6 @@ mueller_elements = [11, 12, 21, 22, 31, 41]
 frame = "LFRAME"
 
 # each row contains: phi, theta_min, theta_max, theta_step in degrees
-planes = [
-    [0.0, 0.0, 180.0, 5.0]
-]
+planes = [[0.0, 0.0, 180.0, 5.0]]
+
+# ----------------------------------------------------------------------

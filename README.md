@@ -140,6 +140,22 @@ accompanying manual and the official DDSCAT User Guide.
     ├── runtime_vs_wavelength.py
     ├── visualize_shape_3d.py
     └── visualize_shape_slice.py
+└── applications-example/
+    ├── generade_ddscat.py
+    ├── input.toml
+    ├── main.sh
+    ├── run_ddscat_pipeline.py
+    └── example-data/
+        └── dust_models_mie/
+            └── astrosil_0.001um/
+                └── dustkappa.dat
+            └── astrosil_0.01um/
+                └── dustkappa.dat
+            └── astrosil_0.1um/
+                └── dustkappa.dat
+            └── astrosil_1.0um/
+                └── dustkappa.dat
+
 ```
 
 The workflow uses one user-editable input file:
@@ -676,6 +692,16 @@ for a new simulation.
 
 ---
 
+## The application example
+
+The example is a demonstration for application of the presented workflow.
+This folder contains example data for Astrosilicate (Draine 2003), which was pre-calculated using the Mie setting in optool (https://github.com/cdominik/optool).
+The pipeline presented here is able to calculate the absorption and scattering efficiency with a pre-defined target number of dipoles for different fixed grain sizes. 
+It then produces plots for visual comparison of convergence against the Mie-solution. Also calculated are RMSE-values for the scattering and absorption efficiencies.
+While this pipeline is currently being actively used and developed, it still might contain some bugs and errors, which are hopefully eliminated in the near future.
+
+---
+
 ## References and further information
 
 - B. T. Draine & P. J. Flatau, DDSCAT User Guide
@@ -684,3 +710,5 @@ for a new simulation.
   11, 1491.
 - Official DDSCAT download page:
   **https://ddscat.wikidot.com/downloads**
+- Optool repository:
+  **https://github.com/cdominik/optool**

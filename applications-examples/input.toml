@@ -1,0 +1,87 @@
+# --------------------------------------------------------------------------
+[paths]
+
+ddscat_executable = "~/ddscat/src/ddscat"
+run_directory = "./runs/test_convergence"
+plot_directory = "./plots/test_convergence"
+material_file = "~/DDA/diel/astrosil"
+
+# Directory containing the pre-calculated Mie/optool models
+mie_directory = "./example-data/dust_models_mie"
+
+# --------------------------------------------------------------------------
+[material]
+
+density_g_cm3 = 2.71
+
+# --------------------------------------------------------------------------
+[target]
+
+shape = "ELLIPSOID"
+
+# Grain radii to test [micron]
+radii_um = [
+    0.001,
+    0.01,
+    0.1,
+    1.0
+]
+
+# Desired approximate numbers of DDSCAT dipoles
+target_dipoles = [
+    100,
+    300,
+    1000,
+    3000,
+    10000
+]
+
+# --------------------------------------------------------------------------
+[wavelength]
+
+minimum_um = 1.0
+maximum_um = 15.0
+count = 1000
+spacing = "LIN"
+
+# --------------------------------------------------------------------------
+[numerics]
+
+solver = "PBCGS2"
+fft = "GPFAFT"
+polarizability = "GKDLDR"
+
+tolerance = 1.0e-5
+max_iterations = 5000
+
+gamma = 1.0e-2
+eta_sca = 0.5
+
+memory = [100, 100, 100]
+
+ambient_refractive_index = 1.0
+
+nearfield = false
+
+# --------------------------------------------------------------------------
+[orientation]
+
+beta = [0.0, 0.0, 1]
+theta = [0.0, 0.0, 1]
+phi = [0.0, 0.0, 1]
+
+# --------------------------------------------------------------------------
+[output]
+
+iorth = 2
+write_sca = 0
+
+mueller_elements = [11, 12, 21, 22, 31, 41]
+
+# --------------------------------------------------------------------------
+[scattering]
+
+frame = "LFRAME"
+planes = [[0.0, 0.0, 180.0, 5.0]]
+
+# --------------------------------------------------------------------------
