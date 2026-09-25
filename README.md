@@ -141,7 +141,7 @@ accompanying manual and the official DDSCAT User Guide.
     ├── visualize_shape_3d.py
     └── visualize_shape_slice.py
 └── applications-example/
-    ├── generade_ddscat.py
+    ├── generate_ddscat.py
     ├── input.toml
     ├── main.sh
     ├── run_ddscat_pipeline.py
