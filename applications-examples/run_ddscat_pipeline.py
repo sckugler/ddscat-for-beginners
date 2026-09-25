@@ -3,7 +3,8 @@
 # ----------------------------------------------------------------------------------
 # run_ddscat_pipeline.py
 #
-# All-in-one pipeline:
+# Combined workflow to provide an example for the application of the presented 
+# toolkit. What this pipeline does:
 #
 #   1. Submit DDSCAT convergence runs via Slurm
 #   2. Read all DDSCAT qtables
@@ -35,6 +36,11 @@
 #       astrosil_0.1um/
 #           dustkappa.dat
 #       ...
+#
+#
+#
+# Please note that this pipeline is still in active testing and development and
+# might contain bugs and inconsistencies. Feel free to report them!
 #
 # ----------------------------------------------------------------------------------
 
@@ -105,22 +111,11 @@ def run_ddscat(config_file):
     print("============================================================")
 
     result = subprocess.run(
-        [
-            "sbatch",
-            str(DDSCAT_MAIN),
-            str(config_file),
-        ],
-        cwd=DDSCAT_DIR,
-        text=True,
-        capture_output=True,
+        ["sbatch", str(DDSCAT_MAIN), str(config_file)], cwd=DDSCAT_DIR, text=True, capture_output=True
     )
 
     if result.returncode != 0:
-
-        raise RuntimeError(
-            f"Failed to submit DDSCAT:\n"
-            f"{result.stderr}"
-        )
+        raise RuntimeError(f"Failed to submit DDSCAT:\n {result.stderr}")
 
     job_id = result.stdout.strip().split()[-1]
 
@@ -128,17 +123,7 @@ def run_ddscat(config_file):
     print("Waiting for DDSCAT to finish...")
 
     while True:
-
-        check = subprocess.run(
-            [
-                "squeue",
-                "-j",
-                job_id,
-                "-h",
-            ],
-            text=True,
-            capture_output=True,
-        )
+        check = subprocess.run(["squeue", "-j", job_id, "-h"], text=True, capture_output=True)
 
         if not check.stdout.strip():
             break
@@ -146,21 +131,12 @@ def run_ddscat(config_file):
         time.sleep(10)
 
     result = subprocess.run(
-        [
-            "sacct",
-            "-j",
-            job_id,
-            "--format=State",
-            "--noheader",
-        ],
-        text=True,
-        capture_output=True,
+        ["sacct", "-j", job_id, "--format=State", "--noheader"], text=True, capture_output=True
     )
 
     states = result.stdout.strip().split()
 
     if not states:
-
         raise RuntimeError(f"Could not determine Slurm status for job {job_id}")
 
     # sacct can return several entries, e.g.:
@@ -173,7 +149,6 @@ def run_ddscat(config_file):
     state = states[0]
 
     if not state.startswith("COMPLETED"):
-
         raise RuntimeError(f"DDSCAT job {job_id} did not complete successfully: {state}")
 
     print(f"DDSCAT job {job_id} completed successfully.")
@@ -187,16 +162,13 @@ def read_qtable(qtable):
     data_lines = []
 
     with open(qtable, "r") as f:
-
         for line in f:
-
             parts = line.split()
 
             if len(parts) < 5:
                 continue
 
             try:
-
                 float(parts[0])
                 float(parts[1])
                 float(parts[2])
@@ -206,11 +178,9 @@ def read_qtable(qtable):
                 data_lines.append(line)
 
             except ValueError:
-
                 pass
 
     if not data_lines:
-
         raise RuntimeError(f"No numerical data found in {qtable}")
 
     data = np.loadtxt(data_lines, ndmin=2)
@@ -231,7 +201,6 @@ def read_actual_dipoles(target_out):
         return None
 
     with open(target_out, "r", errors="ignore") as f:
-
         text = f.read()
 
     # Look for lines containing NAT.
@@ -244,19 +213,13 @@ def read_actual_dipoles(target_out):
     patterns = [
         r"^\s*(\d+)\s*=\s*NAT\b",
         r"\bNAT\s*=\s*(\d+)",
-        r"\bNAT\s*[:=]\s*(\d+)",
+        r"\bNAT\s*[:=]\s*(\d+)"
     ]
 
     for pattern in patterns:
-
-        match = re.search(
-            pattern,
-            text,
-            flags=re.MULTILINE | re.IGNORECASE,
-        )
+        match = re.search(pattern, text, flags=re.MULTILINE | re.IGNORECASE)
 
         if match:
-
             return int(match.group(1))
 
     return None
@@ -274,11 +237,7 @@ def read_all_ddscat(run_base_dir):
 
     radius_dirs = sorted(
         run_base_dir.glob("a_*um"),
-        key=lambda path: float(
-            path.name
-            .removeprefix("a_")
-            .removesuffix("um")
-        ),
+        key=lambda path: float(path.name.removeprefix("a_").removesuffix("um"))
     )
 
     if not radius_dirs:
@@ -290,12 +249,10 @@ def read_all_ddscat(run_base_dir):
     print("============================================================")
 
     for radius_dir in radius_dirs:
-
         radius = float(radius_dir.name.removeprefix("a_").removesuffix("um"))
         ndip_dirs = sorted(radius_dir.glob("ndip_*"), key=lambda path: float(path.name.removeprefix("ndip_")))
 
         if not ndip_dirs:
-
             print()
             print(f"WARNING: No dipole runs found for a = {radius:g} um")
 
@@ -307,18 +264,12 @@ def read_all_ddscat(run_base_dir):
         radius_results = {}
 
         for run_dir in ndip_dirs:
-
             target_ndip = int(run_dir.name.removeprefix("ndip_"))
 
             qtable = run_dir / "qtable"
             target_file = run_dir / "target.out"
 
-            # ---------------------------------------------------------
-            # Check whether qtable exists
-            # ---------------------------------------------------------
-
             if not qtable.exists():
-
                 print(f"  WARNING: Skipping target = {target_ndip:>7d}: qtable missing")
 
                 failed_runs.append({
@@ -330,16 +281,10 @@ def read_all_ddscat(run_base_dir):
 
                 continue
 
-            # ---------------------------------------------------------
-            # Try reading qtable
-            # ---------------------------------------------------------
-
             try:
-
                 wavelength, qabs, qsca = read_qtable(qtable)
 
             except (RuntimeError, ValueError, OSError) as exc:
-
                 print(f"  WARNING: Skipping target = {target_ndip:>7d}: {exc}")
 
                 failed_runs.append({
@@ -351,24 +296,16 @@ def read_all_ddscat(run_base_dir):
 
                 continue
 
-            # ---------------------------------------------------------
-            # Try reading actual number of dipoles
-            # ---------------------------------------------------------
-
             actual_ndip = None
 
             if target_file.exists():
-
                 try:
-
                     actual_ndip = read_actual_dipoles(target_file)
 
                 except (RuntimeError, ValueError, OSError) as exc:
-
                     print(f"  WARNING: Could not read actual dipole count for target = {target_ndip}: {exc}")
 
             else:
-
                 print(f"  WARNING: target.out missing for target = {target_ndip}")
 
             # ---------------------------------------------------------
@@ -387,35 +324,22 @@ def read_all_ddscat(run_base_dir):
             successful_runs += 1
 
             if actual_ndip is None:
-
                 print(f"  target = {target_ndip:>7d} dipoles (actual NAT not found)")
 
             else:
-
                 print(f"  target = {target_ndip:>7d} -> actual = {actual_ndip:>7d} dipoles")
 
-        # -------------------------------------------------------------
-        # Only add radius if at least one successful run exists
-        # -------------------------------------------------------------
-
         if radius_results:
-
             results[radius] = radius_results
 
         else:
-
             print(f"  WARNING: No successful DDSCAT runs for a = {radius:g} um")
 
-    # -----------------------------------------------------------------
-    # Check whether anything could be loaded
-    # -----------------------------------------------------------------
-
     if not results:
-
         raise RuntimeError("No successful DDSCAT qtables could be read.")
 
     # -----------------------------------------------------------------
-    # Summary
+    # Summarize...
     # -----------------------------------------------------------------
 
     print()
@@ -426,7 +350,6 @@ def read_all_ddscat(run_base_dir):
     print(f"Failed runs:     {len(failed_runs)}")
 
     if failed_runs:
-
         print()
         print("Skipped runs:")
 
@@ -462,22 +385,18 @@ def read_mie(mie_base_dir, radius, rho):
     filename = mie_directory / "dustkappa.dat"
 
     if not filename.exists():
-
         raise FileNotFoundError(f"Mie file not found for a = {radius:g} um:\n {filename}")
 
     data_lines = []
 
     with open(filename, "r") as f:
-
         for line in f:
-
             parts = line.split()
 
             if len(parts) != 4:
                 continue
 
             try:
-
                 float(parts[0])
                 float(parts[1])
                 float(parts[2])
@@ -486,11 +405,9 @@ def read_mie(mie_base_dir, radius, rho):
                 data_lines.append(line)
 
             except ValueError:
-
                 pass
 
     if not data_lines:
-
         raise RuntimeError(f"No numerical data found in {filename}")
 
     data = np.loadtxt(data_lines, ndmin=2)
@@ -523,7 +440,6 @@ def compare(wavelength_dd, qabs_dd, qsca_dd, wavelength_mie, qabs_mie, qsca_mie)
     qsca_dd = qsca_dd[valid]
 
     if len(wavelength_dd) == 0:
-
         raise RuntimeError("DDSCAT and Mie wavelength ranges do not overlap.")
 
     qabs_mie_interp = np.interp(wavelength_dd, wavelength_mie, qabs_mie)
@@ -531,8 +447,6 @@ def compare(wavelength_dd, qabs_dd, qsca_dd, wavelength_mie, qabs_mie, qsca_mie)
 
     # --------------------------------------------------------
     # Relative differences
-    #
-    # Avoid division by values extremely close to zero.
     # --------------------------------------------------------
 
     abs_mask = qabs_mie_interp > 0
@@ -584,15 +498,12 @@ def plot_radius(radius, ddscat_results, wavelength_mie, qabs_mie, qsca_mie, outp
     ax.plot(wavelength_mie, qabs_mie, "--", linewidth=2, label="Mie")
 
     for target_ndip, result in ddscat_results.items():
-
         actual_ndip = result["actual_ndip"]
 
         if actual_ndip is None:
-
             label = f"N = {target_ndip}"
 
         else:
-
             label = f"N = {actual_ndip}"
 
         ax.plot(result["wavelength"], result["qabs"], label=label)
@@ -624,15 +535,12 @@ def plot_radius(radius, ddscat_results, wavelength_mie, qabs_mie, qsca_mie, outp
     ax.plot(wavelength_mie, qsca_mie, "--", linewidth=2, label="Mie",)
 
     for target_ndip, result in ddscat_results.items():
-
         actual_ndip = result["actual_ndip"]
 
         if actual_ndip is None:
-
             label = f"N = {target_ndip}"
 
         else:
-
             label = f"N = {actual_ndip}"
 
         ax.plot(result["wavelength"], result["qsca"], label=label)
@@ -670,16 +578,13 @@ def plot_rmse_vs_dipoles(all_statistics, output_dir):
     fig, ax = plt.subplots()
 
     for radius, statistics in all_statistics.items():
-
         ndip = []
         rmse = []
 
         for target_ndip, result in statistics.items():
-
             actual_ndip = result["actual_ndip"]
 
             if actual_ndip is None:
-
                 actual_ndip = target_ndip
 
             ndip.append(actual_ndip)
@@ -713,16 +618,13 @@ def plot_rmse_vs_dipoles(all_statistics, output_dir):
     fig, ax = plt.subplots()
 
     for radius, statistics in all_statistics.items():
-
         ndip = []
         rmse = []
 
         for target_ndip, result in statistics.items():
-
             actual_ndip = result["actual_ndip"]
 
             if actual_ndip is None:
-
                 actual_ndip = target_ndip
 
             ndip.append(actual_ndip)
@@ -756,26 +658,15 @@ def plot_rmse_vs_dipoles(all_statistics, output_dir):
 def print_comparison_statistics(all_statistics):
 
     print()
-    print(
-        "================================================================================"
-    )
-    print(
-        "DDSCAT vs Mie convergence"
-    )
-    print(
-        "================================================================================"
-    )
+    print("================================================================================")
+    print("DDSCAT vs Mie convergence")
+    print("================================================================================")
 
     for radius, statistics in all_statistics.items():
-
         print()
-        print(
-            f"Grain radius: {radius:g} um"
-        )
+        print(f"Grain radius: {radius:g} um")
 
-        print(
-            "--------------------------------------------------------------------------------"
-        )
+        print("--------------------------------------------------------------------------------")
 
         print(
             f"{'Target N':>10} "
@@ -786,23 +677,16 @@ def print_comparison_statistics(all_statistics):
             f"{'Sca rel.RMSE':>16}"
         )
 
-        print(
-            "--------------------------------------------------------------------------------"
-        )
+        print("--------------------------------------------------------------------------------")
 
         for target_ndip, result in statistics.items():
-
             actual_ndip = result["actual_ndip"]
 
             if actual_ndip is None:
-
                 actual_string = "?"
 
             else:
-
-                actual_string = str(
-                    actual_ndip
-                )
+                actual_string = str(actual_ndip)
 
             print(
                 f"{target_ndip:>10d} "
@@ -814,9 +698,7 @@ def print_comparison_statistics(all_statistics):
             )
 
     print()
-    print(
-        "================================================================================"
-    )
+    print("================================================================================")
 
 # ----------------------------------------------------------------------------------
 # Main
@@ -844,7 +726,6 @@ def main():
     # --------------------------------------------------------
 
     if not args.analysis_only:
-
         run_ddscat(config_file)
 
     # --------------------------------------------------------
@@ -860,7 +741,6 @@ def main():
     all_statistics = {}
 
     for radius, radius_results in ddscat_results.items():
-
         print()
         print("------------------------------------------------------------")
         print(f"Reading Mie reference for a = {radius:g} um")
@@ -870,7 +750,6 @@ def main():
         statistics = {}
 
         for target_ndip, result in radius_results.items():
-
             statistics[target_ndip] = compare(
                 result["wavelength"],
                 result["qabs"],
